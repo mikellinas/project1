@@ -112,3 +112,15 @@ PATCH /api/users/123 — you send only the fields you want to change. Everything
 Authorization rule we'll enforce: A user can only modify or delete their own account. The JWT token contains the userId — we compare it against the :id param. If they don't match (and the user isn't an admin), we return 403 Forbidden.
 
 select instead of deleting the password: Rather than fetching then stripping the password, we tell Prisma upfront which fields to return. Cleaner and avoids the data ever touching application memory.
+
+ok i tested the API's and it works.
+Now last comment, I wan't to an admin user role
+and update the role = user to not be able to get all users, get user by id
+only the admin should be able to view all users, also the admin should be able to put, patch and delete other users.
+Show less
+Good call. Here's what we need to change across several files:
+
+Include role in the JWT — currently the token only has userId; we need role too so middleware can check it without a DB query
+New requireAdmin middleware — checks req.user.role === 'ADMIN'
+Update route protection — GET routes become admin-only; PUT/PATCH/DELETE allow admin to act on any user
+Seed script — a one-time script to create the admin user in the database

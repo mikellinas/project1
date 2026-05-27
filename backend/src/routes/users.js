@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { getAll, getById, update, patch, remove } = require('../controllers/users.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ const patchValidation = [
  * /api/users:
  *   get:
  *     summary: Get all users
- *     description: Returns a list of all users. Requires a valid JWT token.
+ *     description: Returns all users. **Admin only.**
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -39,14 +39,21 @@ const patchValidation = [
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', authenticate, getAll);
+router.get('/', authenticate, requireAdmin, getAll);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   get:
  *     summary: Get user by ID
+ *     description: Returns a single user. **Admin only.**
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -57,7 +64,6 @@ router.get('/', authenticate, getAll);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: The user UUID
  *     responses:
  *       200:
  *         description: User found
@@ -71,6 +77,12 @@ router.get('/', authenticate, getAll);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: User not found
  *         content:
@@ -78,14 +90,14 @@ router.get('/', authenticate, getAll);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', authenticate, getById);
+router.get('/:id', authenticate, requireAdmin, getById);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   put:
  *     summary: Full update of a user (PUT)
- *     description: Replaces all user fields. Send the complete user object — omitted fields are set to null. Users can only update their own account.
+ *     description: Replaces all user fields. Users can update their own account. **Admins can update any account.**
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -130,7 +142,7 @@ router.get('/:id', authenticate, getById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Forbidden — can only update your own account
+ *         description: Forbidden
  *         content:
  *           application/json:
  *             schema:
@@ -149,7 +161,7 @@ router.put('/:id', authenticate, updateValidation, update);
  * /api/users/{id}:
  *   patch:
  *     summary: Partial update of a user (PATCH)
- *     description: Updates only the fields you provide. Other fields remain unchanged. Users can only update their own account.
+ *     description: Updates only the fields provided. Users can update their own account. **Admins can update any account.**
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -193,7 +205,7 @@ router.put('/:id', authenticate, updateValidation, update);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Forbidden — can only update your own account
+ *         description: Forbidden
  *         content:
  *           application/json:
  *             schema:
@@ -212,7 +224,7 @@ router.patch('/:id', authenticate, patchValidation, patch);
  * /api/users/{id}:
  *   delete:
  *     summary: Delete a user
- *     description: Permanently deletes the user account. Users can only delete their own account.
+ *     description: Deletes the user account. Users can delete their own account. **Admins can delete any account.**
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -225,7 +237,7 @@ router.patch('/:id', authenticate, patchValidation, patch);
  *           format: uuid
  *     responses:
  *       204:
- *         description: User deleted successfully (no content returned)
+ *         description: Deleted successfully
  *       401:
  *         description: Missing or invalid token
  *         content:
@@ -233,7 +245,7 @@ router.patch('/:id', authenticate, patchValidation, patch);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Forbidden — can only delete your own account
+ *         description: Forbidden
  *         content:
  *           application/json:
  *             schema:

@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const prisma = require('../lib/prisma');
 
-function generateToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '6h' });
+function generateToken(userId, role) {
+  return jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '6h' });
 }
 
 function sanitizeUser(user) {
@@ -33,7 +33,7 @@ async function register(req, res, next) {
       data: { email, password: hashed, name },
     });
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.role);
 
     res.status(201).json({ token, user: sanitizeUser(user) });
   } catch (err) {
@@ -58,7 +58,7 @@ async function login(req, res, next) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.role);
 
     res.status(200).json({ token, user: sanitizeUser(user) });
   } catch (err) {

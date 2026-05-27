@@ -4,23 +4,7 @@
     "description": "Full-stack project API — backend with Express, JWT auth, PostgreSQL via Prisma",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "{{baseUrl}}",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "userId",
-      "value": "",
-      "type": "string"
-    }
-  ],
+  "variable": [],
   "item": [
     {
       "name": "Health",
@@ -76,8 +60,8 @@
                   "});",
                   "const json = pm.response.json();",
                   "if (json.token) {",
-                  "  pm.collectionVariables.set('token', json.token);",
-                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.environment.set('token', json.token);",
+                  "  pm.environment.set('userId', json.user.id);",
                   "  console.log('Token and userId saved');",
                   "}"
                 ],
@@ -105,6 +89,48 @@
           "response": []
         },
         {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has token', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.token).to.be.a('string');",
+                  "  pm.expect(json.user.role).to.equal('ADMIN');",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  pm.environment.set('adminToken', json.token);",
+                  "  console.log('Admin token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@project1.com\",\n  \"password\": \"Admin123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login as admin. Saves adminToken to environment — use this for admin-only endpoints."
+          },
+          "response": []
+        },
+        {
           "name": "Login",
           "event": [
             {
@@ -120,8 +146,8 @@
                   "});",
                   "const json = pm.response.json();",
                   "if (json.token) {",
-                  "  pm.collectionVariables.set('token', json.token);",
-                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.environment.set('token', json.token);",
+                  "  pm.environment.set('userId', json.user.id);",
                   "  console.log('Token and userId saved');",
                   "}"
                 ],
@@ -177,7 +203,7 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/users",
@@ -210,7 +236,7 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/users/{{userId}}",

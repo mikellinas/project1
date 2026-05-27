@@ -39,14 +39,15 @@ async function update(req, res, next) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (req.user.userId !== req.params.id) {
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isAdmin && req.user.userId !== req.params.id) {
       return res.status(403).json({ message: 'You can only update your own account' });
     }
 
-    const { email, name } = req.body;
-
     const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ message: 'User not found' });
+
+    const { email, name } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -67,7 +68,8 @@ async function patch(req, res, next) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (req.user.userId !== req.params.id) {
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isAdmin && req.user.userId !== req.params.id) {
       return res.status(403).json({ message: 'You can only update your own account' });
     }
 
@@ -92,7 +94,8 @@ async function patch(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    if (req.user.userId !== req.params.id) {
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isAdmin && req.user.userId !== req.params.id) {
       return res.status(403).json({ message: 'You can only delete your own account' });
     }
 
