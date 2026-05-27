@@ -4,7 +4,7 @@ const { validationResult } = require('express-validator');
 const prisma = require('../lib/prisma');
 
 function generateToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '6h' });
 }
 
 function sanitizeUser(user) {

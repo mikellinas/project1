@@ -1,25 +1,26 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const morgan = require('morgan');
+const helmet = require('helmet');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 const app = express();
 
-// Security: set safe HTTP headers
-app.use(helmet());
-
-// Allow cross-origin requests (frontend on a different port)
+// helmet blocks external resources by default; relax CSP so Swagger UI loads its own assets
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
-
-// Parse incoming JSON request bodies
 app.use(express.json());
-
-// Log every request to the terminal: method, path, status, response time
 app.use(morgan('dev'));
+
+// Raw spec must be registered before the UI middleware — Express matches top to bottom
+app.get('/api-docs/spec.json', (req, res) => res.json(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api/health', require('./routes/health'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
 
 // 404 handler — catches any route that doesn't match above
 app.use((req, res) => {
