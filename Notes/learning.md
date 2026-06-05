@@ -124,3 +124,33 @@ Include role in the JWT — currently the token only has userId; we need role to
 New requireAdmin middleware — checks req.user.role === 'ADMIN'
 Update route protection — GET routes become admin-only; PUT/PATCH/DELETE allow admin to act on any user
 Seed script — a one-time script to create the admin user in the database
+
+
+Frontend Structure
+
+frontend/
+├── src/
+│   ├── api/
+│   │   └── axios.ts          ← Axios instance — base URL + auto-attach JWT header
+│   ├── context/
+│   │   └── AuthContext.tsx   ← Global auth state: user, token, login(), logout()
+│   ├── components/
+│   │   ├── Navbar.tsx        ← Top nav with links + logout button
+│   │   ├── ProtectedRoute.tsx ← Redirects to /auth if no token
+│   │   └── AdminRoute.tsx    ← Redirects away if not ADMIN role
+│   ├── pages/
+│   │   ├── AuthPage.tsx      ← Login + Register on one screen, toggled
+│   │   ├── ProfilePage.tsx   ← View + edit own profile
+│   │   └── AdminPage.tsx     ← Table of all users, delete action
+│   ├── types/
+│   │   └── index.ts          ← Shared TypeScript types (User, AuthResponse)
+│   ├── App.tsx               ← Route definitions
+│   └── main.tsx              ← Entry point
+├── .env                      ← VITE_API_URL=http://localhost:3000
+└── ...config files
+How the screens connect:
+
+
+/auth    → AuthPage   (public — redirects to /profile if already logged in)
+/profile → ProfilePage (protected — any authenticated user)
+/admin   → AdminPage   (admin only)
