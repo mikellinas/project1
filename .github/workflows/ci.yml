@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  playwright:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+
+    # GitHub spins up a real PostgreSQL container as a service —
+    # no Docker Compose needed in CI
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: project1_user
+          POSTGRES_PASSWORD: project1_pass
+          POSTGRES_DB: project1_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://project1_user:project1_pass@localhost:5432/project1_db
+      JWT_SECRET: ci_test_jwt_secret_not_used_in_production
+      NODE_ENV: test
+      PORT: 3000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Backend ────────────────────────────────────────────────
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Push database schema
+        working-directory: backend
+        run: npx prisma db push
+
+      - name: Seed admin user
+        working-directory: backend
+        run: npm run seed
+
+      # ── Frontend ───────────────────────────────────────────────
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # ── Tests ──────────────────────────────────────────────────
+      - name: Install Playwright dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Install Chromium browser
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: tests
+        run: npx playwright test
+
+      # Always upload the HTML report so you can inspect failures,
+      # even if the test step itself failed
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: tests/playwright-report/
+          retention-days: 7

@@ -28,7 +28,7 @@ export default function AuthPage() {
       const endpoint = tab === 'login' ? '/api/auth/login' : '/api/auth/register';
       const payload = tab === 'login'
         ? { email: form.email, password: form.password }
-        : { email: form.email, password: form.password, name: form.name };
+        : { email: form.email, password: form.password, ...(form.name.trim() && { name: form.name }) };
 
       const { data } = await api.post<AuthResponse>(endpoint, payload);
       login(data.token, data.user);
@@ -75,11 +75,12 @@ export default function AuthPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           {tab === 'register' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
+                id="name"
                 name="name"
                 type="text"
                 value={form.name}
@@ -91,8 +92,9 @@ export default function AuthPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              id="email"
               name="email"
               type="email"
               value={form.email}
@@ -104,8 +106,9 @@ export default function AuthPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
+              id="password"
               name="password"
               type="password"
               value={form.password}

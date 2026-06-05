@@ -102,6 +102,7 @@ export default function AdminPage() {
                     <tr key={u.id} className="bg-indigo-50">
                       <td className="px-4 py-2">
                         <input
+                          aria-label="Edit name"
                           value={editForm.name}
                           onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                           placeholder="Name"
@@ -110,6 +111,7 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-2">
                         <input
+                          aria-label="Edit email"
                           type="email"
                           value={editForm.email}
                           onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
@@ -181,12 +183,14 @@ export default function AdminPage() {
                 {editingId === u.id ? (
                   <div className="flex flex-col gap-3">
                     <input
+                      aria-label="Edit name"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       placeholder="Name"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <input
+                      aria-label="Edit email"
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}

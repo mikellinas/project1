@@ -75,8 +75,9 @@ export default function ProfilePage() {
           /* Edit mode */
           <div className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
+                id="profile-name"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
@@ -84,8 +85,9 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
+                id="profile-email"
                 name="email"
                 type="email"
                 value={form.email}
