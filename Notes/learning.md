@@ -154,3 +154,203 @@ How the screens connect:
 /auth    → AuthPage   (public — redirects to /profile if already logged in)
 /profile → ProfilePage (protected — any authenticated user)
 /admin   → AdminPage   (admin only)
+
+5th of JUNE Update
+
+What's been built
+
+Backend (100% done)
+Express 5 + PostgreSQL via Prisma 7 with @prisma/adapter-pg
+POST /api/auth/register — bcrypt hashing, UUID IDs, express-validator
+POST /api/auth/login — JWT with userId + role in payload
+GET /api/users — admin only
+GET /api/users/:id — admin only
+PUT /api/users/:id — own account or admin
+PATCH /api/users/:id — own account or admin
+DELETE /api/users/:id — own account or admin
+Swagger UI at /api-docs + JSON spec at /api-docs/spec.json
+Admin seed script (admin@project1.com)
+Postman collection + environment JSON
+
+Frontend (100% done)
+React + TypeScript + Vite + Tailwind CSS v4
+Auth page — login/register toggled on same screen
+Profile page — view + edit own account
+Admin page — view all users, edit + delete any user
+JWT stored in localStorage, Axios interceptor auto-injects token
+React Router protected routes
+
+CI/CD (100% done)
+GitHub Actions workflow: install → DB push → seed → Playwright → upload HTML artifact
+PostgreSQL service container in CI
+Playwright report uploaded as artifact (7-day retention)
+
+What's missing
+You stated the goal was register, login, edit, and delete Playwright tests. Only register is done:
+
+Test file	Status
+tests/e2e/register.spec.ts	Done — 8 tests
+tests/e2e/login.spec.ts	Missing
+tests/e2e/profile.spec.ts	Missing (edit own account)
+tests/e2e/admin.spec.ts	Missing (delete user)
+Also missing — Page Object Models for the new pages:
+
+POM file	Status
+tests/pages/AuthPage.ts	Done
+tests/pages/ProfilePage.ts	Missing
+tests/pages/AdminPage.ts	Missing
+Suggested order
+Login tests — reuses AuthPage.ts POM, natural next step
+Profile edit tests — needs ProfilePage.ts POM
+Admin delete tests — needs AdminPage.ts POM, most complex (requires seeding two users)
+
+=================================================================
+
+MISSING TO BULLETPROOF THE PROJECT - analysis from claude
+
+Now I have a full picture of the project. Let me give a thorough CTO-level review covering:
+
+Security
+Architecture/Structure
+Testing
+DevOps/CI/CD
+Performance
+Observability
+Missing features
+Let me think through each area:
+
+Security:
+
+CORS is wide open (app.use(cors())) - should restrict to specific origins
+
+No rate limiting on auth endpoints - brute force vulnerability
+
+JWT stored in localStorage - XSS vulnerable, should use httpOnly cookies
+
+No token refresh mechanism - when 6h token expires, user must re-login
+
+Missing server-side token revocation for logout, no CSP headers beyond disabling them entirely, input validation only at the express-validator level, no HTTPS enforcement, and Swagger docs are publicly accessible without authentication. There's also no CSRF protection, weak password requirements, and no account lockout mechanism after failed login attempts.
+
+Architecture/Structure:
+Missing environment validation at startup, no .env.example reference file, no API versioning structure, and no request ID tracking for tracing.
+
+Testing:
+Only end-to-end tests with Playwright covering basic flows, but missing unit and integration tests, API contract tests, proper test data cleanup, and several critical user journey tests like login, profile updates, and admin operations.
+
+DevOps/CI/CD:
+No staging environment, deployment pipeline only has CI without CD, no Docker containerization, environment-specific configuration management, or database migration strategy beyond destructive pushes, and no rollback capability.
+
+Performance:
+Missing Redis caching, database indexes beyond unique constraints, pagination for the users endpoint which returns everything at once, gzip compression, and connection pool limits.
+
+Observability:
+No structured logging, minimal health checks, no metrics or monitoring infrastructure, error tracking, or uptime monitoring in place.
+
+Missing core features:
+Password reset flows, email verification, refresh token rotation, user profile pictures, and audit logging.
+
+For security and performance improvements, I could integrate OWASP ZAP for automated penetration testing in CI, add dependency vulnerability scanning, and set up performance testing with load testing tools.
+
+Now I'm organizing this into a prioritized roadmap for the CTO. Security fixes come first—rate limiting on auth endpoints, tightening CORS, moving JWT tokens to httpOnly cookies, and running npm audit in CI. Then reliability concerns like database migration strategy, graceful shutdown handling, pagination, and environment validation. Quality improvements follow with backend unit tests, API integration tests, and TypeScript adoption. Scaling concerns like caching and structured logging come next, with nice-to-haves like password reset and email verification at the bottom.
+
+
+Security — Fix These First
+Critical gaps right now:
+
+1. No rate limiting on auth endpoints
+Anyone can brute-force passwords. POST /api/auth/login has zero protection. Fix: add express-rate-limit — 10 attempts per 15 minutes per IP on /api/auth.
+
+2. CORS is wide open
+
+
+app.use(cors()); // accepts requests from ANY origin
+In production this should be cors({ origin: 'https://yourdomain.com' }).
+
+3. JWT in localStorage = XSS vulnerable
+If any script on the page runs (your code or a compromised dependency), it can steal the token. The more secure approach is httpOnly cookies — JavaScript can't read them. This is a real trade-off though: cookies add CSRF complexity, localStorage is simpler. For this learning project localStorage is acceptable; in production it matters.
+
+4. No token revocation / logout
+Your server never knows if a token was "logged out." JWTs are valid until they expire (6h). A stolen token is valid for up to 6 hours with no way to invalidate it. Fix: server-side token blacklist (Redis) or short-lived tokens (15 min) + refresh tokens.
+
+5. Helmet CSP is fully disabled
+
+
+helmet({ contentSecurityPolicy: false }) // all XSS protection off
+You did this to make Swagger UI work, which is a common workaround. The proper fix is a configured CSP policy, not disabling it entirely. Acceptable for now, but not for production.
+
+6. No npm audit in CI
+You have zero dependency vulnerability scanning. Should be a CI step.
+
+--------------------------------------------------------------------------------------------
+
+Architecture — Structural Gaps
+1. No API versioning
+Your routes are /api/auth/login, not /api/v1/auth/login. When you need to change a contract, you have no way to support old clients. Add versioning from the start — renaming later is painful.
+
+2. No pagination on GET /api/users
+Returns every user in the database in one response. At 10,000 users this will be slow and expensive. Add ?page=1&limit=20.
+
+3. No environment validation on startup
+If DATABASE_URL or JWT_SECRET is missing, the server starts silently and crashes on the first request. Should fail loudly at boot with a clear message.
+
+4. No .env.example file
+Any new developer cloning this repo has no idea what env vars are required. Add a .env.example with keys but no values.
+
+5. Using db push instead of migrations
+prisma db push is fine for development but it can silently destroy data in production (drops columns). You should switch to prisma migrate for anything resembling a real environment.
+
+6. No graceful shutdown
+If the server is killed mid-request, open DB connections are dropped. Should handle SIGTERM to drain in-flight requests before exiting.
+
+7. Backend is JavaScript, not TypeScript
+The frontend has full TypeScript. The backend has none. This means no type safety on Prisma queries, no type checking on request/response shapes. This is the single biggest quality gap in the codebase.
+
+--------------------------------------------------------------------------------------------
+
+Testing — What's Missing
+Layer	Status
+Backend unit tests	Missing entirely
+Backend integration/API tests	Missing entirely
+Frontend component tests	Missing entirely
+E2E — register	Done
+E2E — login, edit, delete	Missing
+Performance tests	Missing
+Security/pen tests	Missing
+Right now if a backend function breaks, no test catches it unless the E2E path happens to hit it.
+
+--------------------------------------------------------------------------------------------
+
+On Penetration Testing
+Yes, add it — but don't call it pen testing yet.
+
+What's realistic at this project stage:
+
+OWASP ZAP (free, open source) — can run in CI as a DAST scan. Hits your running app and checks for OWASP Top 10 issues (SQL injection, XSS, broken auth, etc.). This is automated, not manual.
+npm audit in CI — scans all dependencies for known CVEs. 5-minute addition to the workflow.
+Manual pen testing (human-driven) — worth doing after the above gaps are fixed. No point testing pen if the door is already open.
+
+--------------------------------------------------------------------------------------------
+
+On Performance Testing
+Yes, but not in every CI run.
+
+Recommended tool: k6 (free, open source, JavaScript-based — you already know JS). You write scripts that simulate 100 concurrent users hitting your login endpoint, get a report on p95 latency, error rate, and throughput.
+
+This should run on-demand or on a schedule, not on every push — it takes minutes and needs a running server.
+
+--------------------------------------------------------------------------------------------
+
+Priority Order (what I'd do next)
+Priority	Task
+1	Add rate limiting to /api/auth
+2	Add npm audit --audit-level=high to CI
+3	Add .env.example
+4	Add API versioning (/api/v1/)
+5	Add pagination to GET /api/users
+6	Finish remaining Playwright tests
+7	Add backend unit tests (Jest)
+8	Add TypeScript to backend
+9	Switch db push → prisma migrate
+10	Add k6 performance tests
+11	Add OWASP ZAP scan to CI
+Which of these do you want to tackle first?
