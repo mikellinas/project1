@@ -35,6 +35,20 @@ async function register(req, res, next) {
 
     const token = generateToken(user.id, user.role);
 
+    // Fire webhook to n8n for welcome email + Slack notification.
+    // Fire-and-forget: never block or fail registration if n8n is down.
+    if (process.env.N8N_WEBHOOK_URL) {
+      fetch(process.env.N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.name || 'there',
+          userId: user.id,
+        }),
+      }).catch(() => {});
+    }
+
     res.status(201).json({ token, user: sanitizeUser(user) });
   } catch (err) {
     next(err);

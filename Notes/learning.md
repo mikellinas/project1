@@ -354,3 +354,32 @@ Priority	Task
 10	Add k6 performance tests
 11	Add OWASP ZAP scan to CI
 Which of these do you want to tackle first?
+
+
+
+
+Summary — n8n Integration
+Goal: Automate a welcome email + Slack notification whenever a user registers.
+
+What we built
+Added n8n to docker-compose.yml — self-hosted workflow automation tool, running in Docker on port 5678, with its own persistent volume (n8n_data)
+
+Backend webhook call — auth.controller.js now fires a fire-and-forget POST to N8N_WEBHOOK_URL after a successful registration, sending email, name, userId. If n8n is down, registration still succeeds — nothing blocks on it.
+
+n8n workflow ("New user registration") — three nodes:
+
+Webhook (trigger, POST /webhook/user-registered)
+Send an Email — Gmail SMTP using an App Password, sends a welcome email to the new user
+HTTP Request — posts a message to a Slack Incoming Webhook URL announcing the new registration
+Slack setup — created a free personal Slack workspace, a Slack app via the new "Build" portal, enabled Incoming Webhooks, connected to a channel
+
+Tested end-to-end — registered a user, confirmed both the email and Slack message arrived
+
+Published the workflow — switched from the test webhook URL to the production URL and published, so it now runs automatically without the n8n editor needing to be open
+
+Current state
+The full pipeline works: Register → backend → n8n → email + Slack, running passively in the background.
+
+Not yet done
+No tests cover this flow (Playwright tests don't check email/Slack delivery)
+N8N_WEBHOOK_URL and the Slack webhook URL are stored as plain secrets, not yet documented in .env.example
